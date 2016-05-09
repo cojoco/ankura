@@ -142,6 +142,12 @@ def serve_itm():
     return app.send_static_file('index.html')
 
 
+@app.route('/ankura-test')
+def serve_ankura():
+    """Serves the Ankura version of the ITM UI"""
+    return flask.send_from_directory('static', 'ankurajs.html')
+
+
 @app.route('/finished', methods=['GET', 'POST'])
 def save_user_data():
     """Receives and saves user data when done button is clicked in the ITM UI"""
