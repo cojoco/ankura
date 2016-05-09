@@ -132,6 +132,7 @@ linear.computeX = function computeX(anchors) {
     return X;
 }
 
+//Takes the log of each entry in a 2d matrix and returns the resulting matrix
 linear.matrixLog = function matrixLog(matrix) {
     for (var i = 0; i < matrix.length; i++) {
         for (var j = 0; j < matrix[i].length; j++) {
