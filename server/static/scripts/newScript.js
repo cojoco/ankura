@@ -9,14 +9,6 @@ var app = angular.module('anchorApp', [])
         ctrl.anchors = []
 
 
-        // This hold previous states, so we can undo/redo
-        ctrl.anchorsHistory = []
-
-
-        // This tells us where we are in anchorsHistory
-        ctrl.historyIndex = 0
-
-
         // When finished is set to true, it brings us to the "thank you" page
         ctrl.finished = false
 
@@ -59,67 +51,67 @@ var app = angular.module('anchorApp', [])
         //This function adds an anchor word when entered in via an input in the left column
         ctrl.addAnchorWord = function(textForm, newAnchor) {
 
-            $scope.$broadcast("autofillfix:update") //Needed to make autofill and Angular work well together
+          $scope.$broadcast("autofillfix:update") //Needed to make autofill and Angular work well together
 
-            var lowercaseAnchor = textForm.target.children[0].value.toLowerCase()
+          var lowercaseAnchor = textForm.target.children[0].value.toLowerCase()
 
-            //We are checking to see if the new anchor word is in the vocabulary.
-            //  If it is, we add a new anchor and prompt to update topics.
-            //  If it is not, we prompt to add a valid anchor.
+          //We are checking to see if the new anchor word is in the vocabulary.
+          //  If it is, we add a new anchor and prompt to update topics.
+          //  If it is not, we prompt to add a valid anchor.
 
-            var inVocab = false
+          var inVocab = false
 
-            for (var i = 0; i < ctrl.vocab.length; i++) {
-                if (ctrl.vocab[i] === lowercaseAnchor) inVocab = true
-             }
+          for (var i = 0; i < ctrl.vocab.length; i++) {
+            if (ctrl.vocab[i] === lowercaseAnchor) inVocab = true
+          }
 
-            if (inVocab) {
-                newAnchor.push(lowercaseAnchor)
-                //This timeout ensures that the added anchor is put in before the popover appears.
-                //  If removed, the popover will appear too high above the "Update Topics" button.
-                $timeout(function() {
-                    $(".updateTopicsButtonClean").popover({
-                        placement:'top',
-                        trigger:'manual',
-                        html:true,
-                        content:'To see topic words for new anchors, press "Update Topics" here.'
-                    }).popover('show')
-                        .addClass("updateTopicsButtonDirty")
-                        .removeClass("updateTopicsButtonClean")
-                    //This timeout indicates how long the popover above will stay visible for.
-                    $timeout(function() {
-                        $(".updateTopicsButtonDirty").popover('hide')
-                            .addClass("updateTopicsButtonClean")
-                            .removeClass("updateTopicsButtonDirty")
-                    }, 5000)
-                }, 20)
-                textForm.target.children[0].value = ""
-                ctrl.stopChanging()
-            }
+          if (inVocab) {
+            newAnchor.push(lowercaseAnchor)
+            //This timeout ensures that the added anchor is put in before the popover appears.
+            //  If removed, the popover will appear too high above the "Update Topics" button.
+            $timeout(function() {
+              $(".updateTopicsButtonClean").popover({
+                placement:'top',
+                trigger:'manual',
+                html:true,
+                content:'To see topic words for new anchors, press "Update Topics" here.'
+              }).popover('show')
+                .addClass("updateTopicsButtonDirty")
+                .removeClass("updateTopicsButtonClean")
+              //This timeout indicates how long the popover above will stay visible for.
+              $timeout(function() {
+                $(".updateTopicsButtonDirty").popover('hide')
+                  .addClass("updateTopicsButtonClean")
+                  .removeClass("updateTopicsButtonDirty")
+              }, 5000)
+            }, 20)
+            textForm.target.children[0].value = ""
+            ctrl.stopChanging()
+          }
 
-            else {
-                angular.element(textForm.target).popover({
-                    placement:'bottom',
-                    trigger:'manual',
-                    html:true,
-                    content:'Invalid anchor word.'
-                }).popover('show')
-                $timeout(function() {
-                    angular.element(textForm.target).popover('hide')
-                }, 2000)
-            }
+          else {
+            angular.element(textForm.target).popover({
+              placement:'bottom',
+              trigger:'manual',
+              html:true,
+              content:'Invalid anchor word.'
+            }).popover('show')
+            $timeout(function() {
+              angular.element(textForm.target).popover('hide')
+            }, 2000)
+          }
         }
 
 
         //This function deletes an anchor word (when you click on the little 'x' in the bubble)
         ctrl.deleteWord = function(closeButton, array) {
-            var toClose = closeButton.target.parentNode.id
-            $("#"+toClose).remove()
-            var wordIndex = array.indexOf(closeButton.target.parentNode.textContent.replace(/✖/, "").replace(/\s/g, ''))
-            if (wordIndex !== -1) {
-                array.splice(wordIndex, 1)
-            }
-            ctrl.stopChanging()
+          var toClose = closeButton.target.parentNode.id
+          $("#"+toClose).remove()
+          var wordIndex = array.indexOf(closeButton.target.parentNode.textContent.replace(/✖/, "").replace(/\s/g, ''))
+          if (wordIndex !== -1) {
+            array.splice(wordIndex, 1)
+          }
+          ctrl.stopChanging()
         }
 
 
@@ -166,35 +158,29 @@ var app = angular.module('anchorApp', [])
         // Performs a topic request using current anchors
         // cooccMatrix is the cooccurrences matrix, vocab is the vocabulary
         ctrl.topicRequest = function(cooccMatrix, anchors, vocab) {
-            ankura.recoverTopics(cooccMatrix, anchors, vocab)
+          ankura.recoverTopics(cooccMatrix, anchors, vocab)
         }
 
 
         //This function only gets the topics when we have no current anchors.
         ctrl.getTopics = function(getNewExampleDoc) {
 
-            ctrl.loading = true
+          ctrl.loading = true
 
-            var exampleDocName = ctrl.exampleDoc
-            if (getNewExampleDoc) { exampleDocName = '' }
+          var exampleDocName = ctrl.exampleDoc
+          if (getNewExampleDoc) { exampleDocName = '' }
 
-            $.get("/topics", {example: exampleDocName}, function(data) {
-                //Ensure we can't redo something that's been written over
-                ctrl.anchorsHistory.splice(ctrl.historyIndex, ctrl.anchorsHistory.length-ctrl.historyIndex-1)
-                //Save the data
-                console.log(data)
-                ctrl.anchorsHistory.push(data)
-                ctrl.anchors = getAnchorsArray(data["anchors"], data["topics"])
-                ctrl.documents = data['examples']
-                //ctrl.getExampleDocuments(data['example'])
-                //ctrl.exampleDoc = data['example_name']
-                ctrl.singleAnchors = data['single_anchors']
-                ctrl.loading = false
-                ctrl.startChanging()
-                $scope.$apply()
-                ctrl.sampleDocPopup()
-                $(".top-to-bottom").css("height", $(".anchors-and-topics").height())
-            })
+          $.get("/coocc", {}, function(data) {
+            //Save the data
+            ctrl.anchors = getAnchorsArray(data["anchors"], data["topics"])
+            ctrl.documents = data['examples']
+            ctrl.singleAnchors = data['single_anchors']
+            ctrl.loading = false
+            ctrl.startChanging()
+            $scope.$apply()
+            ctrl.sampleDocPopup()
+            $(".top-to-bottom").css("height", $(".anchors-and-topics").height())
+          })
         }
 
 
@@ -207,87 +193,87 @@ var app = angular.module('anchorApp', [])
         //  getNewExampleDoc should be a bool
         ctrl.getNewTopics = function(getNewExampleDoc) {
 
-            // Set to false if we are in singleAnchors mode and don't have
-            //   only single anchors.
-            var onlySingleAnchors = true
-            var currentAnchors = []
-            //The server throws an error if there are no anchors,
-            //  so we want to get new anchors if needed.
-            if ($(".anchorContainer").length !== 0) {
-                //If needed, this checks if the anchors all only have 1 word
-                if (ctrl.singleAnchors) {
-                  $(".anchorContainer").each(function() {
-                    var value = $(this).html().replace(/\s/g, '').replace(/<span[^>]*>/g, '').replace(/<\/span><\/span>/g, ',')
-                    value = value.replace(/<!--[^>]*>/g, '').replace(/,$/, '').replace(/,$/, '').replace(/\u2716/g, '')
-                    //This prevents errors on the server if there are '<' or '>' symbols in the anchors
-                    value = value.replace(/\&lt;/g, '<').replace(/\&gt;/g, '>')
-                    if (value === "") {
-                      return true
-                    }
-                    var tempArray = value.split(",")
-                    if (tempArray.length !== 1) {
-                      ctrl.singleAnchorPopup()
-                      onlySingleAnchors = false
-                      return false
-                    }
-                  })
+          // Set to false if we are in singleAnchors mode and don't have
+          //   only single anchors.
+          var onlySingleAnchors = true
+          var currentAnchors = []
+          //The server throws an error if there are no anchors,
+          //  so we want to get new anchors if needed.
+          if ($(".anchorContainer").length !== 0) {
+            //If needed, this checks if the anchors all only have 1 word
+            if (ctrl.singleAnchors) {
+              $(".anchorContainer").each(function() {
+                var value = $(this).html().replace(/\s/g, '').replace(/<span[^>]*>/g, '').replace(/<\/span><\/span>/g, ',')
+                value = value.replace(/<!--[^>]*>/g, '').replace(/,$/, '').replace(/,$/, '').replace(/\u2716/g, '')
+                //This prevents errors on the server if there are '<' or '>' symbols in the anchors
+                value = value.replace(/\&lt;/g, '<').replace(/\&gt;/g, '>')
+                if (value === "") {
+                  return true
                 }
-                if (!onlySingleAnchors) {return false}
-                $(".anchorContainer").each(function() {
-                    //This parses out just the comma-separated anchors from all the html
-                    var value = $(this).html().replace(/\s/g, '').replace(/<span[^>]*>/g, '').replace(/<\/span><\/span>/g, ',')
-                    value = value.replace(/<!--[^>]*>/g, '').replace(/,$/, '').replace(/,$/, '').replace(/\u2716/g, '')
-                    //This prevents errors on the server if there are '<' or '>' symbols in the anchors
-                    value = value.replace(/\&lt;/g, '<').replace(/\&gt;/g, '>')
-                    if (value === "") {
-                        return true
-                    }
-                    var tempArray = value.split(",")
-                    currentAnchors.push(tempArray)
-                })
-
-                if (currentAnchors.length !== 0) {
-
-                    var getParams = JSON.stringify(currentAnchors)
-
-                    ctrl.loading = true
-
-                    var exampleParam = ctrl.exampleDoc
-                    if (getNewExampleDoc) {exampleParam = ''}
-
-                    $.get("/topics", {anchors: getParams, example: exampleParam}, function(data) {
-                        var saveState = {anchors: currentAnchors,
-                                   topics: data["topics"]}
-                        //This gets rid of the possibility of redoing if another state was saved since the last undo. If nothing has been undone, this should do nothing.
-                        ctrl.anchorsHistory.splice(ctrl.historyIndex+1, ctrl.anchorsHistory.length-ctrl.historyIndex-1)
-                        //Increment historyIndex
-                        ctrl.historyIndex += 1
-                        //Save the current state (anchors and topic words)
-                        ctrl.anchorsHistory.push(saveState)
-                        //Update the anchors in the UI
-                        ctrl.anchors = getAnchorsArray(currentAnchors, data["topics"])
-                        ctrl.documents = data['examples']
-                        //ctrl.getExampleDocuments(data['example'])
-                        //ctrl.exampleDoc = data['example_name']
-                        ctrl.singleAnchors = data['single_anchors']
-                        ctrl.loading = false
-                        ctrl.startChanging()
-                        $scope.$apply()
-                        ctrl.sampleDocPopup()
-                        // Sets the height of the document container
-                        $(".top-to-bottom").css("height", $(".anchors-and-topics").height())
-                    })
+                var tempArray = value.split(",")
+                if (tempArray.length !== 1) {
+                  ctrl.singleAnchorPopup()
+                  onlySingleAnchors = false
+                  return false
                 }
+              })
+            }
+            if (!onlySingleAnchors) {return false}
+            $(".anchorContainer").each(function() {
+              //This parses out just the comma-separated anchors from all the html
+              var value = $(this).html().replace(/\s/g, '').replace(/<span[^>]*>/g, '').replace(/<\/span><\/span>/g, ',')
+              value = value.replace(/<!--[^>]*>/g, '').replace(/,$/, '').replace(/,$/, '').replace(/\u2716/g, '')
+              //This prevents errors on the server if there are '<' or '>' symbols in the anchors
+              value = value.replace(/\&lt;/g, '<').replace(/\&gt;/g, '>')
+              if (value === "") {
+                  return true
+              }
+              var tempArray = value.split(",")
+              currentAnchors.push(tempArray)
+            })
 
-                else {
-                    ctrl.getTopics(getNewExampleDoc)
-                }
+            if (currentAnchors.length !== 0) {
+
+              var getParams = JSON.stringify(currentAnchors)
+
+              ctrl.loading = true
+
+              var exampleParam = ctrl.exampleDoc
+              if (getNewExampleDoc) {exampleParam = ''}
+
+              $.get("/topics", {anchors: getParams, example: exampleParam}, function(data) {
+                var saveState = {anchors: currentAnchors,
+                                 topics: data["topics"]}
+                //This gets rid of the possibility of redoing if another state was saved since the last undo. If nothing has been undone, this should do nothing.
+                ctrl.anchorsHistory.splice(ctrl.historyIndex+1, ctrl.anchorsHistory.length-ctrl.historyIndex-1)
+                //Increment historyIndex
+                ctrl.historyIndex += 1
+                //Save the current state (anchors and topic words)
+                ctrl.anchorsHistory.push(saveState)
+                //Update the anchors in the UI
+                ctrl.anchors = getAnchorsArray(currentAnchors, data["topics"])
+                ctrl.documents = data['examples']
+                //ctrl.getExampleDocuments(data['example'])
+                //ctrl.exampleDoc = data['example_name']
+                ctrl.singleAnchors = data['single_anchors']
+                ctrl.loading = false
+                ctrl.startChanging()
+                $scope.$apply()
+                ctrl.sampleDocPopup()
+                // Sets the height of the document container
+                $(".top-to-bottom").css("height", $(".anchors-and-topics").height())
+              })
             }
 
-            //This gets new anchors if we need them.
             else {
-                ctrl.getTopics(getNewExampleDoc)
+              ctrl.getTopics(getNewExampleDoc)
             }
+          }
+
+          //This gets new anchors if we need them.
+          else {
+            ctrl.getTopics(getNewExampleDoc)
+          }
 
         }
 
@@ -334,50 +320,50 @@ var app = angular.module('anchorApp', [])
 
 
         ctrl.popoverIfDisabled = function(index) {
-            var selector = "#show-docs-button-" + index
-            var btn = $(selector)
-            var disabled = btn.prop('disabled')
-            var anyOpen = false
-            $("[id^=show-docs-button-]").each(function() {
-                var pop = $(this).parent().data('bs.popover')
-                if (pop !== undefined)
-                {
-                    anyOpen = pop.tip().hasClass('in')
-                }
-            })
-            btn.popover()
-            if (disabled && !anyOpen) {
-                var parent = btn.parent()
-                parent.popover({
-                    placement: 'bottom',
-                    trigger: 'manual',
-                    html: true,
-                    content: 'Click "Update Topics" to sample new documents.'
-                }).popover('show')
-                $timeout(function() {
-                    ctrl.closePopover(index)
-                }, 3000)
+          var selector = "#show-docs-button-" + index
+          var btn = $(selector)
+          var disabled = btn.prop('disabled')
+          var anyOpen = false
+          $("[id^=show-docs-button-]").each(function() {
+            var pop = $(this).parent().data('bs.popover')
+            if (pop !== undefined)
+            {
+                anyOpen = pop.tip().hasClass('in')
             }
+          })
+          btn.popover()
+          if (disabled && !anyOpen) {
+            var parent = btn.parent()
+            parent.popover({
+              placement: 'bottom',
+              trigger: 'manual',
+              html: true,
+              content: 'Click "Update Topics" to sample new documents.'
+            }).popover('show')
+            $timeout(function() {
+              ctrl.closePopover(index)
+            }, 3000)
+          }
         }
 
 
       ctrl.closePopover = function closePopover(index) {
-          var selector = "#show-docs-button-" + index
-          var coke = $(selector)
-          coke.parent().popover('destroy')
+        var selector = "#show-docs-button-" + index
+        var coke = $(selector)
+        coke.parent().popover('destroy')
       }
 
 
     }).directive("autofillfix", function() {
-        //This is required because of some problem between Angular and autofill
-        return {
-            require: "ngModel",
-            link: function(scope, element, attrs, ngModel) {
-                scope.$on("autofillfix:update", function() {
-                    ngModel.$setViewValue(element.val())
-                })
-            }
+      //This is required because of some problem between Angular and autofill
+      return {
+        require: "ngModel",
+        link: function(scope, element, attrs, ngModel) {
+          scope.$on("autofillfix:update", function() {
+            ngModel.$setViewValue(element.val())
+          })
         }
+      }
     })
 
 app.directive("autocomplete", function() {
@@ -425,13 +411,13 @@ app.directive("autocomplete", function() {
 //This function returns an array of anchor objects from arrays of anchors and topics.
 //Anchor objects hold both anchor words and topic words related to the anchor words.
 var getAnchorsArray = function(anchors, topics) {
-    var tempAnchors = []
-    for (var i = 0; i < anchors.length; i++) {
-        anchor = anchors[i]
-        var topic = topics[i]
-        tempAnchors.push({"anchors":anchor, "topic":topic})
-    }
-    return tempAnchors
+  var tempAnchors = []
+  for (var i = 0; i < anchors.length; i++) {
+    anchor = anchors[i]
+    var topic = topics[i]
+    tempAnchors.push({"anchors":anchor, "topic":topic})
+  }
+  return tempAnchors
 }
 
 
@@ -440,12 +426,12 @@ var getAnchorsArray = function(anchors, topics) {
 
 
 var allowDrop = function(ev) {
-    ev.preventDefault()
+  ev.preventDefault()
 }
 
 
 var drag = function(ev) {
-    ev.dataTransfer.setData("text", ev.target.id)
+  ev.dataTransfer.setData("text", ev.target.id)
 }
 
 
@@ -454,80 +440,80 @@ var copyId = 0
 
 
 var drop = function(ev) {
-    ev.preventDefault()
-    var data = ev.dataTransfer.getData("text")
-    var dataString = JSON.stringify(data)
-    //If an anchor or a copy of a topic word, drop
-    if (dataString.indexOf("anchor") !== -1 || dataString.indexOf("copy") !== -1) {
-        //Need to cover all the possible places in the main div it could be dropped
-        if($(ev.target).hasClass( "droppable" )) {
-            ev.target.appendChild(document.getElementById(data))
-        }
-        else if($(ev.target).hasClass( "draggable" )) {
-            $(ev.target).parent()[0].appendChild(document.getElementById(data))
-        }
-        else if($(ev.target).hasClass( "anchorInputContainer" )) {
-            $(ev.target).siblings(".anchorContainer")[0].appendChild(document.getElementById(data))
-        }
-        else if ($(ev.target).hasClass( "anchorInput" )) {
-            $(ev.target).parent().parent().siblings(".anchorContainer")[0].appendChild(document.getElementById(data))
-        }
-        else if ($(ev.target).hasClass( "anchor" )) {
-            $(ev.target).children(".anchorContainer")[0].appendChild(document.getElementById(data))
-        }
-        var $scope = angular.element('body').scope()
-        $scope.$apply(function() {
-          $scope.ctrl.stopChanging()
-        })
+  ev.preventDefault()
+  var data = ev.dataTransfer.getData("text")
+  var dataString = JSON.stringify(data)
+  //If an anchor or a copy of a topic word, drop
+  if (dataString.indexOf("anchor") !== -1 || dataString.indexOf("copy") !== -1) {
+    //Need to cover all the possible places in the main div it could be dropped
+    if($(ev.target).hasClass( "droppable" )) {
+      ev.target.appendChild(document.getElementById(data))
     }
-    //If a topic word, copy it
-    else {
-        var nodeCopy = document.getElementById(data).cloneNode(true)
-        nodeCopy.id = data + "copy" + copyId++
-        var closeButton = addDeleteButton(nodeCopy.id + "close")
-        nodeCopy.appendChild(closeButton)
-        //Need to cover all the possible places in the main div it could be dropped
-        if($(ev.target).hasClass( "droppable" )) {
-            ev.target.appendChild(nodeCopy)
-        }
-        else if($(ev.target).hasClass( "draggable" )) {
-            $(ev.target).parent()[0].appendChild(nodeCopy)
-        }
-        else if($(ev.target).hasClass( "anchorInputContainer" )) {
-            $(ev.target).siblings(".anchorContainer")[0].appendChild(nodeCopy)
-        }
-        else if ($(ev.target).hasClass( "anchorInput" )) {
-            $(ev.target).parent().parent().siblings(".anchorContainer")[0].appendChild(nodeCopy)
-        }
-        else if ($(ev.target).hasClass( "anchor" )) {
-            $(ev.target).children(".anchorContainer")[0].appendChild(nodeCopy)
-        }
-        var $scope = angular.element('body').scope()
-        $scope.$apply(function() {
-          $scope.ctrl.stopChanging()
-        })
+    else if($(ev.target).hasClass( "draggable" )) {
+      $(ev.target).parent()[0].appendChild(document.getElementById(data))
     }
+    else if($(ev.target).hasClass( "anchorInputContainer" )) {
+      $(ev.target).siblings(".anchorContainer")[0].appendChild(document.getElementById(data))
+    }
+    else if ($(ev.target).hasClass( "anchorInput" )) {
+      $(ev.target).parent().parent().siblings(".anchorContainer")[0].appendChild(document.getElementById(data))
+    }
+    else if ($(ev.target).hasClass( "anchor" )) {
+      $(ev.target).children(".anchorContainer")[0].appendChild(document.getElementById(data))
+    }
+    var $scope = angular.element('body').scope()
+    $scope.$apply(function() {
+      $scope.ctrl.stopChanging()
+    })
+  }
+  //If a topic word, copy it
+  else {
+    var nodeCopy = document.getElementById(data).cloneNode(true)
+    nodeCopy.id = data + "copy" + copyId++
+    var closeButton = addDeleteButton(nodeCopy.id + "close")
+    nodeCopy.appendChild(closeButton)
+    //Need to cover all the possible places in the main div it could be dropped
+    if($(ev.target).hasClass( "droppable" )) {
+      ev.target.appendChild(nodeCopy)
+    }
+    else if($(ev.target).hasClass( "draggable" )) {
+      $(ev.target).parent()[0].appendChild(nodeCopy)
+    }
+    else if($(ev.target).hasClass( "anchorInputContainer" )) {
+      $(ev.target).siblings(".anchorContainer")[0].appendChild(nodeCopy)
+    }
+    else if ($(ev.target).hasClass( "anchorInput" )) {
+      $(ev.target).parent().parent().siblings(".anchorContainer")[0].appendChild(nodeCopy)
+    }
+    else if ($(ev.target).hasClass( "anchor" )) {
+      $(ev.target).children(".anchorContainer")[0].appendChild(nodeCopy)
+    }
+    var $scope = angular.element('body').scope()
+    $scope.$apply(function() {
+      $scope.ctrl.stopChanging()
+    })
+  }
 }
 
 
 //used to delete words that are copies (because they can't access the function in the Angular scope)
 var deleteWord = function(ev) {
-    $("#"+ev.target.id).parent()[0].remove()
+  $("#"+ev.target.id).parent()[0].remove()
 }
 
 
 //Adds a delete button (little 'x' on the right side) of an anchor word
 var addDeleteButton = function(id) {
-    var closeButton = document.createElement("span")
-    closeButton.innerHTML = " &#10006"
-    var closeClass = document.createAttribute("class")
-    closeClass.value = "close"
-    closeButton.setAttributeNode(closeClass)
-    var closeId = document.createAttribute("id")
-    closeId.value = id
-    closeButton.setAttributeNode(closeId)
-    var closeClick = document.createAttribute("onclick")
-    closeClick.value = "deleteWord(event)"
-    closeButton.setAttributeNode(closeClick)
-    return closeButton
+  var closeButton = document.createElement("span")
+  closeButton.innerHTML = " &#10006"
+  var closeClass = document.createAttribute("class")
+  closeClass.value = "close"
+  closeButton.setAttributeNode(closeClass)
+  var closeId = document.createAttribute("id")
+  closeId.value = id
+  closeButton.setAttributeNode(closeId)
+  var closeClick = document.createAttribute("onclick")
+  closeClick.value = "deleteWord(event)"
+  closeButton.setAttributeNode(closeClick)
+  return closeButton
 }
