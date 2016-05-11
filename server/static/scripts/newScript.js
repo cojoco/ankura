@@ -158,7 +158,7 @@ var app = angular.module('anchorApp', [])
         // Performs a topic request using current anchors
         // cooccMatrix is the cooccurrences matrix, vocab is the vocabulary
         ctrl.topicRequest = function(cooccMatrix, anchors, vocab) {
-          ankura.recoverTopics(cooccMatrix, anchors, vocab)
+          return ankura.recoverTopics(cooccMatrix, anchors, vocab)
         }
 
 
@@ -171,9 +171,11 @@ var app = angular.module('anchorApp', [])
           if (getNewExampleDoc) { exampleDocName = '' }
 
           $.get("/coocc", {}, function(data) {
+            topics = ctrl.topicRequest(data["coocc"],
+                                       data["anchor_tokens"],
+                                       ctrl.vocab)
             //Save the data
-            ctrl.anchors = getAnchorsArray(data["anchors"], data["topics"])
-            ctrl.documents = data['examples']
+            ctrl.anchors = getAnchorsArray(data["anchor_tokens"], topics)
             ctrl.singleAnchors = data['single_anchors']
             ctrl.loading = false
             ctrl.startChanging()
@@ -414,7 +416,8 @@ var getAnchorsArray = function(anchors, topics) {
   var tempAnchors = []
   for (var i = 0; i < anchors.length; i++) {
     anchor = anchors[i]
-    var topic = topics[i]
+    //TODO: Change this back to topics
+    var topic = 'Test'
     tempAnchors.push({"anchors":anchor, "topic":topic})
   }
   return tempAnchors

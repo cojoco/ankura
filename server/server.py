@@ -206,6 +206,18 @@ def topic_request():
                          examples=docdata,
                          single_anchors=args.single_anchors)
 
+
+@app.route('/coocc')
+def coocc_request():
+    """Gets the co-occurrences matrix"""
+    dataset = args.get_dataset()
+    anchor_tokens, anchors = args.default_anchors()
+    print(dataset.Q)
+    return flask.jsonify(coocc=dataset.Q.tolist(),
+                         anchor_tokens=anchor_tokens,
+                         single_anchors=args.single_anchors)
+
+
 if __name__ == '__main__':
     # call these to trigger pickle_cache
     args.get_dataset()
