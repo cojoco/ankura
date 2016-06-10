@@ -8,6 +8,11 @@ var app = angular.module('anchorApp', [])
         //  An anchor holds both anchor words for a single anchor and topic words that describe that anchor.
         ctrl.anchors = []
 
+        // This hold previous states, so we can undo/redo
+        ctrl.anchorsHistory = []
+
+        // This tells us where we are in anchorsHistory
+        ctrl.historyIndex = 0
 
         // When finished is set to true, it brings us to the "thank you" page
         ctrl.finished = false
@@ -171,11 +176,14 @@ var app = angular.module('anchorApp', [])
           if (getNewExampleDoc) { exampleDocName = '' }
 
           $.get("/coocc", {}, function(data) {
-            topics = ctrl.topicRequest(data["coocc"],
-                                       data["anchor_tokens"],
-                                       ctrl.vocab)
+            //n is the number of words to have in each topic summary
+            var n = 10
+            var topics = ankura.recoverTopics(data["coocc"],
+                                          data["anchor_tokens"],
+                                          ctrl.vocab)
+            var topicSummary = ankura.topicSummaryTokens(topics, ctrl.vocab, n)
             //Save the data
-            ctrl.anchors = getAnchorsArray(data["anchor_tokens"], topics)
+            ctrl.anchors = getAnchorsArray(data["anchor_tokens"], topicSummary)
             ctrl.singleAnchors = data['single_anchors']
             ctrl.loading = false
             ctrl.startChanging()
@@ -416,8 +424,7 @@ var getAnchorsArray = function(anchors, topics) {
   var tempAnchors = []
   for (var i = 0; i < anchors.length; i++) {
     anchor = anchors[i]
-    //TODO: Change this back to topics
-    var topic = 'Test'
+    topic = topics[i]
     tempAnchors.push({"anchors":anchor, "topic":topic})
   }
   return tempAnchors

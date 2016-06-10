@@ -32,7 +32,6 @@ ankura.exponentiatedGradient = function exponentiatedGradient(Y, X, XX, epsilon)
   var oldGrad = linear.deepCloneMatrix(grad)
 
   var newObj = numeric.add(numeric.sub(AXXA, numeric.mul(2, AXY)), YY)
-  console.log("newObj:" + newObj)
 
   //Initialize bookkeeping
   var stepsize = 1
@@ -40,10 +39,9 @@ ankura.exponentiatedGradient = function exponentiatedGradient(Y, X, XX, epsilon)
   var convergence = Infinity
 
   while (convergence >= epsilon) {
-    console.log("convergence: " + convergence)
     var oldObj = newObj
-    var oldAlpha = linear.deepCloneMatrix(alpha)
-    var oldLogalpha = linear.deepCloneMatrix(logAlpha)
+    oldAlpha = linear.deepCloneMatrix(alpha)
+    oldLogAlpha = linear.deepCloneMatrix(logAlpha)
     if (newObj === 0 || stepsize === 0) {
       break
     }
@@ -53,7 +51,6 @@ ankura.exponentiatedGradient = function exponentiatedGradient(Y, X, XX, epsilon)
     logAlpha = numeric.sub(logAlpha, numeric.mul(stepsize, grad))
     logAlpha = numeric.sub(logAlpha, linear.logsumExp(logAlpha))
     alpha = numeric.exp(logAlpha)
-    console.log("Added gradient and renormalized in logspace, then exponentiated")
 
     //Precompute quantities needed for adaptive stepsize
     AXX = numeric.dot(alpha, XX)
@@ -61,19 +58,11 @@ ankura.exponentiatedGradient = function exponentiatedGradient(Y, X, XX, epsilon)
     alphaNested = []
     alphaNested[0] = alpha
     AXXA = numeric.dot(AXX, numeric.transpose(alphaNested))
-    console.log("Precomputed AXX, AXY, and AXXA")
 
     //See if stepsize should decrease
     oldObj = newObj
-    console.log("oldObj is " + oldObj)
-    innerMult = numeric.mul(AXY, 2)
-    console.log("innerMult is " + innerMult)
-    innerSub = numeric.sub(AXXA, innerMult)
-    console.log("innerSub is " + innerSub)
-    innerAdd = numeric.add(innerSub, YY)
-    console.log("innerAdd is " + innerAdd)
-    newObj = numeric.add(numeric.sub(AXXA, numeric.mul(2, AXY)), YY)
-    console.log("Computed newObj, it's " + newObj)
+    newObj = AXXA - 2 * AXY + YY
+    var compareValue = (_C1 * stepsize * numeric.dot(grad, numeric.sub(alpha, oldAlpha)))
     if (newObj > (oldObj + (_C1 * stepsize *
                             numeric.dot(grad, numeric.sub(alpha, oldAlpha))))) {
       stepsize = stepsize / 2.0
@@ -81,14 +70,12 @@ ankura.exponentiatedGradient = function exponentiatedGradient(Y, X, XX, epsilon)
       logAlpha = oldLogAlpha
       newObj = oldObj
       decreased = true
-      console.log("stepsize should decrease")
       continue
     }
 
     //Compute the new gradient
     oldGrad = grad
     grad = numeric.mul(2, numeric.sub(AXX, XY))
-    console.log("Computed new gradient, it's " + grad)
     //See if stepsize should increase
     if (numeric.dot(grad, numeric.sub(alpha, oldAlpha)) <
         (_C2 * numeric.dot(oldGrad, numeric.sub(alpha, oldAlpha))) &&
@@ -98,16 +85,14 @@ ankura.exponentiatedGradient = function exponentiatedGradient(Y, X, XX, epsilon)
       logAlpha = oldLogAlpha
       grad = oldGrad
       newObj = oldObj
-      console.log("stepsize should increase")
       continue
     }
 
     //Update bookkeeping
     decreased = false
     convergence = numeric.dot(alpha, numeric.sub(grad, linear.matrixMin(grad)))
-    console.log("updated bookkeeping with convergence === " + convergence)
+
   }
-  console.log("returned alpha is " + alpha)
   return alpha
 }
 
@@ -141,21 +126,84 @@ ankura.recoverTopics = function recoverTopics(cooccMatrix, anchors, vocab) {
   var XX = numeric.dot(X, X_T)
 
   //Do exponentiated gradient descent
-  var epsilon = Math.pow(10, -7)
-  for (var i = 0; i < 1; i++) {
-    //Y = cooccMatrix[i];
-    var alpha = ankura.exponentiatedGradient(cooccMatrix[i],
+  var epsilon = 2 * Math.pow(10, -7)
+  for (var i = 0; i < V; i++) {
+    var alpha = ankura.exponentiatedGradient(Q[i],
                                              X,
                                              XX,
                                              epsilon)
-
-    //if numpy.isnan(alpha).any() appears to check if anything in
-    // alpha is NaN, and converts alpha to a matrix of ones if so.
-    // This is in ankura/topic.py, line 115
-    //I am basically rewriting the recover_topics function right now
-    //Overall, I am trying to translate what happens starting at line 79
-    // in server.py
+    if (linear.hasNaN(alpha)) {
+      var ones = linear.matrixOnes(1, alpha.length)
+      alpha = numeric.div(ones, numeric.sum(ones))
+    }
+    A[i] = alpha
   }
-  console.log("returning from recoverTopics")
-  return "This will be topics someday"
+  A = linear.matrixMultiply(P_w, A)
+  for (var j = 0; j < K; j++) {
+    colSum = linear.sumCol(j, A)
+    for (var i = 0; i < A.length; i++) {
+      A[i][j] = A[i][j] / colSum
+    }
+  }
+  return A
+}
+
+//Returns a list of the indices of the top n tokens per topic
+ankura.topicSummaryIndices = function topicSummaryIndices(topics, vocab, n) {
+  var indices = []
+  for (var k = 0; k < topics[0].length; k++) {
+    var index = []
+    //Get topics[:, k] if this was Python
+    var words = []
+    for (var topicIterator = 0; topicIterator < topics.length; topicIterator++) {
+      words.push(topics[topicIterator][k])
+    }
+    //numpy.argsort(topics[:, k]) if this was Python
+    var topWordsIndices = ankura.argSort(words)
+    //numpy.argsort(topics[:, k])[-n:][::-1] if this was Python
+    //This gives the indices of the n highest values in words, largest to smallest
+    for (var i = topWordsIndices.length-1; i > topWordsIndices.length - 1 - n; i--) {
+      index.push(topWordsIndices[i])
+    }
+    indices.push(index)
+  }
+  return indices
+}
+
+//Returns a list of top n tokens per topic
+ankura.topicSummaryTokens = function topicSummaryTokens(topics, vocab, n) {
+  var summaries = []
+  var indices = ankura.topicSummaryIndices(topics, vocab, n)
+  for (var i = 0; i < indices.length; i++) {
+    var summary = []
+    for (var j = 0; j < indices[i].length; j++) {
+      summary.push(vocab[indices[i][j]])
+    }
+    summaries.push(summary)
+  }
+  return summaries
+}
+
+//Returns the indices of the words array from index of the smallest word to index of the largest word
+ankura.argSort = function argSort(words) {
+  sortedIndices = []
+  sortedIndices[0] = 0
+  for (var i = 1; i < words.length; i++) {
+    if (words[i] <= words[sortedIndices[0]]) {
+      sortedIndices.splice(0, 0, i)
+    }
+    else if (words[i] > words[sortedIndices[sortedIndices.length-1]]) {
+      sortedIndices.push(i)
+    }
+    else {
+      for (var j = 0; j < sortedIndices.length; j++) {
+        if (words[i] <= words[sortedIndices[j]]) {
+          //splice(index, numThingsToDelete, item)
+          sortedIndices.splice(j, 0, i)
+          break
+        }
+      }
+    }
+  }
+  return sortedIndices
 }

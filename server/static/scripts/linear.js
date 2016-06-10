@@ -42,6 +42,18 @@ linear.matrixZeroes = function matrixZeroes(rows, cols) {
   return arr;
 }
 
+//Creates a matrix of the specified number of rows and columns full of ones
+linear.matrixOnes = function matrixOnes(rows, cols) {
+  var arr = [];
+  for (var i = 0; i < rows; i++) {
+    arr[i] = [];
+    for (var j = 0; j < cols; j++) {
+      arr[i][j] = 1;
+    }
+  }
+  return arr;
+}
+
 //Creates a deep copy of a matrix
 linear.deepCloneMatrix = function deepCloneMatrix(arr) {
   var len = arr.length;
@@ -55,6 +67,22 @@ linear.deepCloneMatrix = function deepCloneMatrix(arr) {
     }
   }
   return newArr;
+}
+
+//Performs matrix multiplication
+linear.matrixMultiply = function matrixMultiply(A, B) {
+  var result = []
+  for (var i = 0; i < A.length; i++) {
+    result[i] = []
+    for (var j = 0; j < B[0].length; j++) {
+      var sum = 0
+      for (var k = 0; k < A[0].length; k++) {
+        sum += A[i][k] * B[k][j]
+      }
+      result[i][j] = sum
+    }
+  }
+  return result
 }
 
 //Normalizes the rows of the matrix passed into it
@@ -85,7 +113,7 @@ linear.sumRow = function sumRow(row) {
   return sum;
 }
 
-//Sums a row of a matrix
+//Sums a col of a matrix
 linear.sumCol = function sumCol(colNum, matrix) {
   var sum = 0;
   for (var i = 0; i < matrix.length; i++) {
@@ -145,16 +173,32 @@ linear.matrixLog = function matrixLog(matrix) {
 //Computes the sum of a matrix in log space
 linear.logsumExp = function logsumExp(matrix) {
   max = linear.matrixMax(matrix);
-  console.log("max: " + max)
-  sub = numeric.sub(matrix, max)
-  console.log("sub: " + sub)
-  exp = numeric.exp(sub)
-  console.log("exp: " + exp)
-  sum = numeric.sum(exp)
-  console.log("sum: " + sum)
-  log = Math.log(sum)
-  console.log("log: " + log)
   return max + Math.log(numeric.sum(numeric.exp(numeric.sub(matrix, max))));
+}
+
+//Returns true if any value in the matrix is NaN, false otherwise
+linear.hasNaN = function isnan(matrix) {
+  //If just an array
+  if (matrix[0] !== Array) {
+    for (var i = 0; i < matrix.length; i++) {
+      if (Number.isNaN(matrix[i])) {
+        return true
+      }
+    }
+    return false
+  }
+  else {
+    for (var i = 0; i < matrix.length; i++) {
+      for (var j = 0; j < matrix[i].length; j++) {
+        if (Number.isNaN(matrix[i][j])) {
+          return true
+        }
+      }
+    }
+    return false
+  }
+  //I don't think we ever actually get to this throw statement
+  throw "linear.hasNaN called on something not a 1D or 2D matrix"
 }
 
 //Finds the minimum value in a 2D matrix
