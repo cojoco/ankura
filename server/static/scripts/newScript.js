@@ -17,6 +17,19 @@ var app = angular.module('anchorApp', [])
         // When finished is set to true, it brings us to the "thank you" page
         ctrl.finished = false
 
+        // Vocab holds the vocabulary of valid words
+        ctrl.vocab
+
+        // This holds the cooccurrences matrix from the server
+        ctrl.coocc = null
+
+        // This holds the original anchors from the server
+        ctrl.baseAnchors = null
+
+        // This holds the topic summary for each anchor
+        ctrl.topicSummary = null
+
+
 
         // This function sends the anchorsHistory array to the server
         //   and send the user to the "thank you" page
@@ -28,13 +41,6 @@ var app = angular.module('anchorApp', [])
             })
           }
         }
-
-
-        // Vocab holds the vocabulary of valid words
-        ctrl.vocab
-        $.get("/vocab", function(data) {
-          ctrl.vocab = data.vocab
-        })
 
 
         // This function adds a blank anchor to the page
@@ -160,42 +166,46 @@ var app = angular.module('anchorApp', [])
         }
 
 
-        // Performs a topic request using current anchors
-        // cooccMatrix is the cooccurrences matrix, vocab is the vocabulary
-        ctrl.topicRequest = function(cooccMatrix, anchors, vocab) {
-          return ankura.recoverTopics(cooccMatrix, anchors, vocab)
-        }
-
-
         //This function only gets the topics when we have no current anchors.
         ctrl.getTopics = function(getNewExampleDoc) {
-
           ctrl.loading = true
 
           var exampleDocName = ctrl.exampleDoc
           if (getNewExampleDoc) { exampleDocName = '' }
 
+          var n = 10
+          var topics = ankura.recoverTopics(ctrl.coocc,
+                                        ctrl.baseAnchors,
+                                        ctrl.vocab)
+          ctrl.topicSummary = ankura.topicSummaryTokens(topics, ctrl.vocab, n)
+          //Save the data
+          ctrl.anchors = getAnchorsArray(ctrl.baseAnchors, ctrl.topicSummary)
+          ctrl.loading = false
+          ctrl.startChanging()
+          $scope.$apply()
+          ctrl.sampleDocPopup()
+          $(".top-to-bottom").css("height", $(".anchors-and-topics").height())
+        }
+
+
+        //This function gets the data from the server
+        ctrl.getServerData = function getServerData() {
+          ctrl.loading = true
+          $.get("/vocab", {}, function(data) {
+            ctrl.vocab = data["vocab"]
+          })
           $.get("/coocc", {}, function(data) {
             //n is the number of words to have in each topic summary
-            var n = 10
-            var topics = ankura.recoverTopics(data["coocc"],
-                                          data["anchor_tokens"],
-                                          ctrl.vocab)
-            var topicSummary = ankura.topicSummaryTokens(topics, ctrl.vocab, n)
-            //Save the data
-            ctrl.anchors = getAnchorsArray(data["anchor_tokens"], topicSummary)
-            ctrl.singleAnchors = data['single_anchors']
-            ctrl.loading = false
-            ctrl.startChanging()
-            $scope.$apply()
-            ctrl.sampleDocPopup()
-            $(".top-to-bottom").css("height", $(".anchors-and-topics").height())
+            ctrl.coocc = data["coocc"]
+            ctrl.baseAnchors = data["anchor_tokens"]
+            ctrl.singleAnchors = data["single_anchors"]
+            ctrl.getTopics(true)
           })
         }
 
 
-        //We actually call the above function here, so we get the original topics
-        ctrl.getTopics(true)
+        // Get data from the server
+        ctrl.getServerData()
 
 
         //This function takes all anchors from the left column and gets their new topic words.
@@ -252,20 +262,26 @@ var app = angular.module('anchorApp', [])
               if (getNewExampleDoc) {exampleParam = ''}
 
               $.get("/topics", {anchors: getParams, example: exampleParam}, function(data) {
+
                 var saveState = {anchors: currentAnchors,
-                                 topics: data["topics"]}
+                                 topics: ctrl.topicSummary}
                 //This gets rid of the possibility of redoing if another state was saved since the last undo. If nothing has been undone, this should do nothing.
                 ctrl.anchorsHistory.splice(ctrl.historyIndex+1, ctrl.anchorsHistory.length-ctrl.historyIndex-1)
                 //Increment historyIndex
                 ctrl.historyIndex += 1
                 //Save the current state (anchors and topic words)
                 ctrl.anchorsHistory.push(saveState)
-                //Update the anchors in the UI
-                ctrl.anchors = getAnchorsArray(currentAnchors, data["topics"])
+                //Update the anchors in the model
+                var n = 10
+                var topics = ankura.recoverTopics(ctrl.coocc,
+                                                  currentAnchors,
+                                                  ctrl.vocab)
+                ctrl.topicSummary = ankura.topicSummaryTokens(topics, ctrl.vocab, n)
+                //Update the anchors in the view
+                ctrl.anchors = getAnchorsArray(currentAnchors, ctrl.topicSummary)
                 ctrl.documents = data['examples']
                 //ctrl.getExampleDocuments(data['example'])
                 //ctrl.exampleDoc = data['example_name']
-                ctrl.singleAnchors = data['single_anchors']
                 ctrl.loading = false
                 ctrl.startChanging()
                 $scope.$apply()
