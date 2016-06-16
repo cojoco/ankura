@@ -29,6 +29,9 @@ var app = angular.module('anchorApp', [])
         // This holds the topic summary for each anchor
         ctrl.topicSummary = null
 
+        // This tells us when we are loading something and need to display the spinner
+        ctrl.loading = false
+
 
 
         // This function sends the anchorsHistory array to the server
@@ -156,6 +159,7 @@ var app = angular.module('anchorApp', [])
         ctrl.getTopics = function(getNewExampleDoc) {
           ctrl.loading = true
 
+          //n is the number of words to have in each topic summary
           var n = 10
           var topics = ankura.recoverTopics(ctrl.coocc,
                                         ctrl.baseAnchors,
@@ -176,7 +180,6 @@ var app = angular.module('anchorApp', [])
             ctrl.vocab = data["vocab"]
           })
           $.get("/coocc", {}, function(data) {
-            //n is the number of words to have in each topic summary
             ctrl.coocc = data["coocc"]
             ctrl.baseAnchors = data["anchor_tokens"]
             ctrl.singleAnchors = data["single_anchors"]
@@ -194,13 +197,13 @@ var app = angular.module('anchorApp', [])
         //  getNewExampleDoc should be a bool
         ctrl.getNewTopics = function(getNewExampleDoc) {
 
+          ctrl.loading = true
           // Set to false if we are in singleAnchors mode and don't have
           //   only single anchors.
-          ctrl.loading = true
           var onlySingleAnchors = true
           var currentAnchors = []
-          //The server throws an error if there are no anchors,
-          //  so we want to get new anchors if needed.
+          //The server used to throw an error if there were no anchors,
+          //  so we want to get the base anchors if needed.
           if ($(".anchorContainer").length !== 0) {
             //If needed, this checks if the anchors all only have 1 word
             if (ctrl.singleAnchors) {
@@ -236,7 +239,6 @@ var app = angular.module('anchorApp', [])
             })
 
             if (currentAnchors.length !== 0) {
-              ctrl.loading = true
               var saveState = {anchors: currentAnchors,
                                topics: ctrl.topicSummary}
               //This gets rid of the possibility of redoing if another state was saved since the last undo. If nothing has been undone, this should do nothing.
@@ -246,16 +248,17 @@ var app = angular.module('anchorApp', [])
               //Save the current state (anchors and topic words)
               ctrl.anchorsHistory.push(saveState)
               //Update the anchors in the model
-              var n = 10
-              var topics = ankura.recoverTopics(ctrl.coocc,
-                                                currentAnchors,
-                                                ctrl.vocab)
-              ctrl.topicSummary = ankura.topicSummaryTokens(topics, ctrl.vocab, n)
-              //Update the anchors in the view
-              ctrl.anchors = getAnchorsArray(currentAnchors, ctrl.topicSummary)
-              ctrl.loading = false
-              ctrl.startChanging()
-              $scope.$apply()
+              $timeout(function() {
+                var n = 10
+                var topics = ankura.recoverTopics(ctrl.coocc,
+                                                  currentAnchors,
+                                                  ctrl.vocab)
+                ctrl.topicSummary = ankura.topicSummaryTokens(topics, ctrl.vocab, n)
+                //Update the anchors in the view
+                ctrl.anchors = getAnchorsArray(currentAnchors, ctrl.topicSummary)
+                ctrl.loading = false
+                ctrl.startChanging()
+              }, 50)
             }
 
             else {
@@ -271,8 +274,8 @@ var app = angular.module('anchorApp', [])
         }
 
 
-        // Called when an anchor words is added or deleted, since the topics
-        //   no longer reflect the current anchor words
+        // Called when an anchor word is added, moved or deleted, since the
+        //   topics no longer reflect the current anchor words
         ctrl.stopChanging = function stopChanging() {
           ctrl.noChangesYet = false
         }
