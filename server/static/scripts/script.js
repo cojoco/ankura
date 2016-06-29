@@ -274,6 +274,12 @@ var app = angular.module('anchorApp', [])
         }
 
 
+        // Gets a document for the user-facing document browser
+        ctrl.getDocument = function getDocument() {
+          console.log("getDocument called")
+        }
+
+
         // Called when an anchor word is added, moved or deleted, since the
         //   topics no longer reflect the current anchor words
         ctrl.stopChanging = function stopChanging() {

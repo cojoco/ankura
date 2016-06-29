@@ -148,6 +148,58 @@ ankura.recoverTopics = function recoverTopics(cooccMatrix, anchors, vocab) {
   return A
 }
 
+//Produces topic assignments for a sequence of tokens given a set of topics
+ankura.predictTopics = function predictTopics(topics, tokens, alpha, num_iters) {
+  var T = topics[0].length
+  // z = numpy.zeros(len(tokens)) in Python
+  var z = []
+  for (var i = 0; i < tokens.length; i++) {
+    z[i] = 0
+  }
+  // counts = numpy.zeros(T) in Python
+  var counts = []
+  for (var i = 0; i < T; i++) {
+    counts[i] = 0
+  }
+
+  // init topics and topic counts
+  for (var n = 0; n < tokens.length; n++) {
+    var z_n = Math.floor(Math.random() * T)
+    z[n] = z_n
+    counts[z_n] += 1
+  }
+
+  for (var i = 0; i < num_iters; i++) {
+    for (var n = 0; n < tokens.length; n++) {
+      var w_n = tokens[n]
+      counts[z[n]] -= 1
+      var probList = []
+      for (var t = 0; t < T; t++) {
+        var prob = (alpha + counts[t]) * topics[w_n][t]
+        probList[t] = prob
+      }
+      z[n] = ankura.sampleCategorical(probList)
+      counts[z[n]] += 1
+    }
+  }
+
+  return {"counts": counts, "z": z}
+}
+
+ankura.sampleCategorical = function sampleCategorical(counts) {
+  var countsSum = linear.sumRow(counts)
+  var sample = Math.random() * countsSum
+  for (var key = 0; key < counts.length; key++) {
+    var count = counts[key]
+    if (sample < count) {
+      return key
+    }
+    sample -= count
+  }
+  throw "ValueError in ankura.sampleCategorical, sample is " + sample + " and "
+    + "countsSum is " + countsSum
+}
+
 //Returns a list of the indices of the top n tokens per topic
 ankura.topicSummaryIndices = function topicSummaryIndices(topics, vocab, n) {
   var indices = []
