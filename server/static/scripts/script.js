@@ -3,7 +3,6 @@ var app = angular.module('anchorApp', [])
 
         var ctrl = this
 
-
         //This holds all of the anchor objects.
         //An anchor holds both anchor words for a single anchor and topic
         //  words that describe that anchor.
@@ -33,7 +32,6 @@ var app = angular.module('anchorApp', [])
         //This tells us when we are loading something and need to display
         //  the spinner
         ctrl.loading = false
-
 
 
         //This function sends the anchorsHistory array to the server
