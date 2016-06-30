@@ -62,7 +62,8 @@ ankura.exponentiatedGradient = function exponentiatedGradient(Y, X, XX, epsilon)
     //See if stepsize should decrease
     oldObj = newObj
     newObj = AXXA - 2 * AXY + YY
-    var compareValue = (_C1 * stepsize * numeric.dot(grad, numeric.sub(alpha, oldAlpha)))
+    var compareValue = (_C1 * stepsize *
+                        numeric.dot(grad, numeric.sub(alpha, oldAlpha)))
     if (newObj > (oldObj + (_C1 * stepsize *
                             numeric.dot(grad, numeric.sub(alpha, oldAlpha))))) {
       stepsize = stepsize / 2.0
@@ -149,7 +150,9 @@ ankura.recoverTopics = function recoverTopics(cooccMatrix, anchors, vocab) {
 }
 
 //Produces topic assignments for a sequence of tokens given a set of topics
-ankura.predictTopics = function predictTopics(topics, tokens, alpha, num_iters) {
+ankura.predictTopics = function predictTopics(topics, tokens) {
+  var alpha = 0.01
+  var num_iters = 10
   var T = topics[0].length
   // z = numpy.zeros(len(tokens)) in Python
   var z = []
@@ -207,15 +210,16 @@ ankura.topicSummaryIndices = function topicSummaryIndices(topics, vocab, n) {
     var index = []
     //Get topics[:, k] if this was Python
     var words = []
-    for (var topicIterator = 0; topicIterator < topics.length; topicIterator++) {
-      words.push(topics[topicIterator][k])
+    for (var topicIter = 0; topicIter < topics.length; topicIter++) {
+      words.push(topics[topicIter][k])
     }
     //numpy.argsort(topics[:, k]) if this was Python
-    var topWordsIndices = ankura.argSort(words)
+    var topWordsInd = ankura.argSort(words)
     //numpy.argsort(topics[:, k])[-n:][::-1] if this was Python
-    //This gives the indices of the n highest values in words, largest to smallest
-    for (var i = topWordsIndices.length-1; i > topWordsIndices.length - 1 - n; i--) {
-      index.push(topWordsIndices[i])
+    //This gives the indices of the n highest values in words, largest to
+    //  smallest
+    for (var i = topWordsInd.length-1; i > topWordsInd.length - 1 - n; i--) {
+      index.push(topWordsInd[i])
     }
     indices.push(index)
   }
@@ -236,7 +240,8 @@ ankura.topicSummaryTokens = function topicSummaryTokens(topics, vocab, n) {
   return summaries
 }
 
-//Returns the indices of the words array from index of the smallest word to index of the largest word
+//Returns the indices of the words array from index of the smallest word to
+//  index of the largest word
 ankura.argSort = function argSort(words) {
   sortedIndices = []
   sortedIndices[0] = 0
@@ -250,7 +255,7 @@ ankura.argSort = function argSort(words) {
     else {
       for (var j = 0; j < sortedIndices.length; j++) {
         if (words[i] <= words[sortedIndices[j]]) {
-          //splice(index, numThingsToDelete, item)
+          //splice usage: splice(index, numThingsToDelete, itemToInsert)
           sortedIndices.splice(j, 0, i)
           break
         }
