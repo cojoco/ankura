@@ -2,6 +2,7 @@
 
 import functools
 import numpy
+import scipy.stats
 
 from .util import tuplize
 
@@ -26,20 +27,21 @@ def random_projection(A, k, rng=numpy.random):
 def identify_candidates(M, doc_threshold):
     """Return list of potential anchor words from a sparse docwords matrix
 
-    Candiate anchor words are words which appear in a significant number of
-    documents. These are not rarewords persey (or else they would probably be
-    filtered during pre-processing), but do not appear in enough documents to
-    be useful as an anchor word.
+    Candidate anchor words are words which appear in a significant number of
+    documents. The words not chosen as candidate anchor words are not rarewords
+    per se (or else they would probably be filtered during pre-processing), but
+    do not appear in enough documents to be useful as an anchor word.
     """
     candidate_anchors = []
-    for i in range(M.shape[0]):
-        if M[i, :].nnz > doc_threshold:
+    M_csr = M.tocsr()
+    for i in range(M_csr.shape[0]):
+        if M_csr[i, :].nnz > doc_threshold:
             candidate_anchors.append(i)
     return candidate_anchors
 
 
 def gramschmidt_anchors(dataset, k, candidate_threshold, **kwargs):
-    """Uses stabalized Gram-Schmidt decomposition to find k anchors
+    """Uses stabilized Gram-Schmidt decomposition to find k anchors
 
     The original Q will not be modified. The anchors are returned in the form
     of a list of k indicies into the original Q. The candidate threshold is
@@ -130,6 +132,15 @@ def vector_min(anchor):
 def vector_or(anchor):
     """Combines a multiword anchor (as vectors) using or probabilties"""
     return 1 - (1 - anchor).prod(axis=0)
+
+
+def vector_hmean(anchor, epsilon=1e-10):
+    """Combines a multiword anchor (as vectors) with elementwise harmonic mean
+
+    Since the harmonic mean is only defined when all values are greater than
+    zero, we add in epsilon as a smoothing constant to avoid divide by zero
+    """
+    return scipy.stats.hmean(anchor + epsilon, axis=0)
 
 
 def multiword_anchors(dataset, anchor_tokens, combiner=vector_min):
