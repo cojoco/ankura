@@ -165,6 +165,12 @@ h4 {
     margin-left: 50px;
 }
 
+#docForm {
+    float: left;
+    margin-top: 5px;
+    margin-left: 5px;
+}
+
 #doneForm {
     margin-left: 200px;
     margin-top: 40px;

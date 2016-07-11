@@ -11,6 +11,7 @@ import random
 import re
 import sys
 import argparse
+import copy
 from datetime import datetime
 
 import ankura
@@ -218,10 +219,36 @@ def coocc_request():
                          single_anchors=args.single_anchors)
 
 
+def reservoir(candidates, rnd, num_to_choose):
+    candidates_size = len(candidates)
+    if candidates_size < num_to_choose:
+        logger = logging.getLogger(__name__)
+        logger.info('Not enough candidates to perform reservoir sampling!')
+        return copy.deepcopy(candidates)
+    result = copy.deepcopy(candidates[:num_to_choose])
+    for i in range(num_to_choose, candidates_size):
+        j = rnd.randint(0, i-1)
+        if j < num_to_choose:
+            result[j] = candidates[i]
+    return result
+
+
+@app.route('/docs')
+def get_documents():
+    """Returns a random set of documents"""
+    num_docs_to_send = 100
+    dataset = args.get_dataset()
+    potential_docs = list(range(dataset.num_docs))
+    doc_ids = reservoir(potential_docs, random, num_docs_to_send)
+    documents = {doc: dataset.doc_metadata(doc, 'text') for doc in doc_ids}
+    return flask.jsonify({'documents': documents})
+
+
 if __name__ == '__main__':
     # call these to trigger pickle_cache
     args.get_dataset()
     args.default_anchors()
 
     # start the server, with the data already cached
-    app.run(debug=True, use_reloader=False, host='0.0.0.0', port=args.port)
+    # TODO (Connor): change use_reloader back to False
+    app.run(debug=True, use_reloader=True, host='0.0.0.0', port=args.port)

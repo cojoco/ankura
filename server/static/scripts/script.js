@@ -303,8 +303,12 @@ var app = angular.module('anchorApp', [])
 
 
         // Gets a document for the user-facing document browser
-        ctrl.getDocument = function getDocument() {
-          console.log("getDocument called")
+        ctrl.getNewDocuments = function getNewDocuments() {
+          console.log("getNewDocuments called")
+          $.get('/docs', function(data) {
+            console.log('/docs call successfully returned')
+            console.log(data)
+          })
         }
 
 
