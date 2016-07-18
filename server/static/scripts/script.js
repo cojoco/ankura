@@ -29,6 +29,15 @@ var app = angular.module('anchorApp', [])
         //This holds the topic summary for each anchor
         ctrl.topicSummary = null
 
+        //This holds the actual topics for each anchor
+        ctrl.topics = null
+
+        //This holds the sample documents to display
+        ctrl.documents = null
+
+        //This holds the topics for each word of each sample document
+        ctrl.docWordTopics = []
+
         //This tells us when we are loading something and need to display
         //  the spinner
         ctrl.loading = false
@@ -169,14 +178,17 @@ var app = angular.module('anchorApp', [])
 
           //n is the number of words to have in each topic summary
           var n = 10
-          var topics = ankura.recoverTopics(ctrl.coocc,
+          ctrl.topics = ankura.recoverTopics(ctrl.coocc,
                                         ctrl.baseAnchors,
                                         ctrl.vocab)
-          ctrl.topicSummary = ankura.topicSummaryTokens(topics, ctrl.vocab, n)
+          ctrl.topicSummary = ankura.topicSummaryTokens(ctrl.topics, ctrl.vocab, n)
           //Save the data
           ctrl.anchors = getAnchorsArray(ctrl.baseAnchors, ctrl.topicSummary)
           ctrl.loading = false
-          ctrl.startChanging()
+          if (getNewExampleDoc) {
+            ctrl.getNewDocuments()
+            ctrl.startChanging()
+          }
           $scope.$apply()
         }
 
@@ -276,7 +288,7 @@ var app = angular.module('anchorApp', [])
               //Update the anchors in the model
               $timeout(function() {
                 var n = 10
-                var topics = ankura.recoverTopics(ctrl.coocc,
+                ctrl.topics = ankura.recoverTopics(ctrl.coocc,
                                                   currentAnchors,
                                                   ctrl.vocab)
                 ctrl.topicSummary = ankura.topicSummaryTokens(topics,
@@ -302,12 +314,18 @@ var app = angular.module('anchorApp', [])
         }
 
 
-        // Gets a document for the user-facing document browser
+        // Gets documents for the sample documents
         ctrl.getNewDocuments = function getNewDocuments() {
-          console.log("getNewDocuments called")
           $.get('/docs', function(data) {
-            console.log('/docs call successfully returned')
-            console.log(data)
+            ctrl.documents = data['documents']
+            for (var i = 0; i < data['documents'].length; i++) {
+              ctrl.docWordTopics[i] = ankura.predictTopics(ctrl.topics,
+                                                           data['documents'][i])
+              console.log("document " + i)
+              console.log(ctrl.docWordTopics[i])
+            }
+            $scope.$apply()
+            $("#sampleDocuments").height($(".anchors-and-topics").height())
           })
         }
 

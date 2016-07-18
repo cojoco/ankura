@@ -236,7 +236,7 @@ def reservoir(candidates, rnd, num_to_choose):
 @app.route('/docs')
 def get_documents():
     """Returns a random set of documents"""
-    num_docs_to_send = 100
+    num_docs_to_send = 5
     dataset = args.get_dataset()
     potential_docs = list(range(dataset.num_docs))
     doc_ids = reservoir(potential_docs, random, num_docs_to_send)

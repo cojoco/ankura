@@ -185,5 +185,11 @@ h4 {
 }
 
 #newDocForm {
-  float: right;
+    float: right;
+}
+
+#sampleDocuments {
+    border: 1px solid gray;
+    height: 100%;
+    overflow: auto;
 }

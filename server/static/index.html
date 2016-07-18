@@ -26,10 +26,12 @@
     </div>
     <div class="container" ng-hide="ctrl.finished">
       <div class="row">
-        <div class="col-sm-3 col-md-3 col-lg-3 col-xs-12"><h4>Anchor Words</h4></div>
-        <div class="col-sm-9 col-md-9 col-lg-9 col-xs-12"><h4>Topic Words</h4></div>
+        <div class="col-sm-2 col-md-2 col-lg-2 col-xs-12"><h4>Anchor Words</h4></div>
+        <div class="col-sm-6 col-md-6 col-lg-6 col-xs-12"><h4>Topic Words</h4></div>
+        <div class="col-sm-4 col-md-4 col-lg-4 col-xs-12"
+          ng-show="ctrl.noChangesYet"><h4>Sample Documents</h4></div>
       </div>
-      <div class="col-sm-12 col-md-12 col-lg-12 col-xs-12 anchors-and-topics"> 
+      <div class="col-sm-8 col-md-8 col-lg-8 col-xs-12 anchors-and-topics"> 
         <div class="row anchor-and-topic" id="anchor-and-topic-{{this.$index}}"
           ng-repeat="anchorObj in ctrl.anchors">
           <div class="col-sm-4 col-md-4 col-lg-4 col-xs-12">
@@ -67,6 +69,10 @@
           </div>
         </div>
       </div>
+      <div id="sampleDocuments" class="col-sm-4 col-md-4 col-lg-4 col-xs-12"
+        ng-show="ctrl.noChangesYet">
+        <div class="sampleDocument" ng-repeat="doc in ctrl.documents"><p>{{doc}}</p></div>
+      </div>
       <div class="row col-sm-12 col-md-12 col-lg-12 col-xs-12 done-container">
         <form id="doneForm" ng-submit="ctrl.done()">
           <button type="submit"
@@ -83,7 +89,8 @@
           <button type="submit"
             class="btn btn-primary btn-sm updateTopicsButtonClean">Update Topics</button>
         </form>
-        <form id="docForm" ng-submit="ctrl.getNewDocuments()">
+        <form id="docForm" ng-submit="ctrl.getNewDocuments()"
+          ng-show="ctrl.noChangesYet">
           <button type="submit" class="btn btn-sm">New Documents</button>
         </form>
       </div>
