@@ -154,11 +154,14 @@ ankura.predictTopics = function predictTopics(topics, tokens) {
   var alpha = 0.01
   var num_iters = 10
   var T = topics[0].length
+
   // z = numpy.zeros(len(tokens)) in Python
+  // I changed it to -1's so I would know when a word shouldn't get a topic.
   var z = []
   for (var i = 0; i < tokens.length; i++) {
-    z[i] = 0
+    z[i] = -1
   }
+
   // counts = numpy.zeros(T) in Python
   var counts = []
   for (var i = 0; i < T; i++) {
@@ -167,6 +170,7 @@ ankura.predictTopics = function predictTopics(topics, tokens) {
 
   // init topics and topic counts
   for (var n = 0; n < tokens.length; n++) {
+    if (tokens[n] === -1) { continue }
     var z_n = Math.floor(Math.random() * T)
     z[n] = z_n
     counts[z_n] += 1
@@ -174,6 +178,7 @@ ankura.predictTopics = function predictTopics(topics, tokens) {
 
   for (var i = 0; i < num_iters; i++) {
     for (var n = 0; n < tokens.length; n++) {
+      if (tokens[n] === -1) { continue }
       var w_n = tokens[n]
       counts[z[n]] -= 1
       var probList = []

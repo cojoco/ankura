@@ -189,6 +189,10 @@ var app = angular.module('anchorApp', [])
             ctrl.getNewDocuments()
             ctrl.startChanging()
           }
+          else {
+            ctrl.getDocTopics()
+            ctrl.startChanging()
+          }
           $scope.$apply()
         }
 
@@ -291,11 +295,12 @@ var app = angular.module('anchorApp', [])
                 ctrl.topics = ankura.recoverTopics(ctrl.coocc,
                                                   currentAnchors,
                                                   ctrl.vocab)
-                ctrl.topicSummary = ankura.topicSummaryTokens(topics,
+                ctrl.topicSummary = ankura.topicSummaryTokens(ctrl.topics,
                                                               ctrl.vocab, n)
                 //Update the anchors in the view
                 ctrl.anchors = getAnchorsArray(currentAnchors,
                                                ctrl.topicSummary)
+                ctrl.getDocTopics()
                 ctrl.loading = false
                 ctrl.startChanging()
               }, 50)
@@ -314,16 +319,28 @@ var app = angular.module('anchorApp', [])
         }
 
 
+        // Gets topics for sample documents
+        ctrl.getDocTopics = function getDocTopics() {
+          ctrl.docWordTopics = []
+          for (var key in ctrl.documents) {
+            wordList = ctrl.documents[key].trim().toLowerCase().split(/\s+/)
+            // Convert words to their corresponding indices
+            for (var i = 0; i < wordList.length; i++) {
+              wordList[i] = ctrl.vocab.indexOf(wordList[i])
+            }
+            ctrl.docWordTopics.push(ankura.predictTopics(ctrl.topics,
+                                                           wordList))
+          }
+          console.log(ctrl.docWordTopics)
+        }
+
+
         // Gets documents for the sample documents
         ctrl.getNewDocuments = function getNewDocuments() {
           $.get('/docs', function(data) {
             ctrl.documents = data['documents']
-            for (var i = 0; i < data['documents'].length; i++) {
-              ctrl.docWordTopics[i] = ankura.predictTopics(ctrl.topics,
-                                                           data['documents'][i])
-              console.log("document " + i)
-              console.log(ctrl.docWordTopics[i])
-            }
+            console.log(ctrl.documents)
+            ctrl.getDocTopics()
             $scope.$apply()
             $("#sampleDocuments").height($(".anchors-and-topics").height())
           })
