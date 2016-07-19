@@ -332,6 +332,7 @@ var app = angular.module('anchorApp', [])
                                                            wordList))
           }
           console.log(ctrl.docWordTopics)
+          $("#sampleDocuments").height($(".anchors-and-topics").height())
         }
 
 
@@ -342,7 +343,6 @@ var app = angular.module('anchorApp', [])
             console.log(ctrl.documents)
             ctrl.getDocTopics()
             $scope.$apply()
-            $("#sampleDocuments").height($(".anchors-and-topics").height())
           })
         }
 
